@@ -82,6 +82,25 @@ with DAG(
         print(f"Metrics saved to: {metrics_output_path}")
         return metrics_output_path
 
+    @task
+    def upload_model_to_minio(model_path):
+        s3 = boto3.client(
+            "s3",
+            endpoint_url=MINIO_ENDPOINT,
+            aws_access_key_id=MINIO_ACCESS_KEY,
+            aws_secret_access_key=MINIO_SECRET_KEY,
+            region_name="us-east-1",
+        )
+
+        minio_model_object = "model/gastric_cancer_model.pkl"
+
+        s3.upload_file(
+            model_path,
+            BUCKET_NAME,
+            minio_model_object,
+        )
+        print(f"Model uploaded to MinIO at {minio_model_object}")
+
     raw_data = extract_from_minio()
     cleaned_data = preprocess_dataset(raw_data)
     trained_model = train_dataset(cleaned_data)
@@ -89,3 +108,4 @@ with DAG(
         cleaned_data,
         trained_model,
     )
+    model_object = upload_model_to_minio(trained_model)
