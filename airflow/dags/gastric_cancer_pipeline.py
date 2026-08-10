@@ -6,6 +6,10 @@ from airflow.sdk import DAG, task  # type: ignore
 
 from src.preprocessing.preprocess import preprocess_data
 
+from src.training.train import train_model
+
+from src.evaluation.evaluate import evaluate_model
+
 MINIO_ENDPOINT = "http://minio:9000"
 MINIO_ACCESS_KEY = "minioadmin"
 MINIO_SECRET_KEY = "minioadmin"
@@ -48,5 +52,40 @@ with DAG(
         print(f"Preprocessed dataset saved to {result}")
         return result
 
+    @task
+    def train_dataset(input_path):
+        model_output_path = "/tmp/gastric_cancer_model.pkl"
+
+        train_model(
+            input_path,
+            model_output_path,
+        )
+
+        print("Model training completed successfully.")
+
+        return model_output_path
+
+    @task
+    def evaluate_dataset(input_path, model_path):
+        metrics_output_path = "/tmp/gastric_cancer_metrics.json"
+
+        evaluate_model(
+            input_path,
+            model_path,
+            metrics_output_path,
+        )
+
+        print("Model evaluation completed successfully.")
+        print(f"Metrics saved to: {metrics_output_path}")
+
+        print("Model evaluation completed successfully.")
+        print(f"Metrics saved to: {metrics_output_path}")
+        return metrics_output_path
+
     raw_data = extract_from_minio()
     cleaned_data = preprocess_dataset(raw_data)
+    trained_model = train_dataset(cleaned_data)
+    evaluation_metrics = evaluate_dataset(
+        cleaned_data,
+        trained_model,
+    )
