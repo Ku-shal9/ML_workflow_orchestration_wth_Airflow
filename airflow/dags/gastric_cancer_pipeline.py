@@ -1,7 +1,10 @@
-from airflow.sdk import DAG, task
 from datetime import datetime
+from unittest import result
 
 import boto3
+from airflow.sdk import DAG, task  # type: ignore
+
+from src.preprocessing.preprocess import preprocess_data
 
 MINIO_ENDPOINT = "http://minio:9000"
 MINIO_ACCESS_KEY = "minioadmin"
@@ -38,4 +41,12 @@ with DAG(
 
         return local_file
 
-    extract_from_minio()
+    @task
+    def preprocess_dataset(input_path):
+        output_path = "/tmp/cleaned_gastric_cancer_dataset.csv"
+        result = preprocess_data(input_path, output_path)
+        print(f"Preprocessed dataset saved to {result}")
+        return result
+
+    raw_data = extract_from_minio()
+    cleaned_data = preprocess_dataset(raw_data)

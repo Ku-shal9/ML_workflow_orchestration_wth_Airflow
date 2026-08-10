@@ -51,6 +51,7 @@ services:
 
   airflow-webserver:
     image: apache/airflow:3.3.0
+    hostname: airflow-webserver
     depends_on:
       - postgres
       - airflow-init
@@ -60,6 +61,7 @@ services:
       AIRFLOW__API__SECRET_KEY: "oVOgsX9F2GFvdw5h/mGYfA=="
       AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-webserver:8080/execution/"
       AIRFLOW__API_AUTH__JWT_SECRET: "deF+Ve2sDL6Q8K7cW/ZyMg=="
+      PYTHONPATH: /opt/airflow
     command: api-server
     ports:
       - "8080:8080"
@@ -71,6 +73,7 @@ services:
 
   airflow-dag-processor:
     image: apache/airflow:3.3.0
+    hostname: airflow-dag-processor
     depends_on:
       - postgres
       - airflow-init
@@ -80,6 +83,7 @@ services:
       AIRFLOW__API__SECRET_KEY: "oVOgsX9F2GFvdw5h/mGYfA=="
       AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-webserver:8080/execution/"
       AIRFLOW__API_AUTH__JWT_SECRET: "deF+Ve2sDL6Q8K7cW/ZyMg=="
+      PYTHONPATH: /opt/airflow
     command: dag-processor
     volumes:
       - ./airflow/dags:/opt/airflow/dags
@@ -89,6 +93,7 @@ services:
 
   airflow-scheduler:
     image: apache/airflow:3.3.0
+    hostname: airflow-scheduler
     depends_on:
       - postgres
       - airflow-init
@@ -98,6 +103,7 @@ services:
       AIRFLOW__API__SECRET_KEY: "oVOgsX9F2GFvdw5h/mGYfA=="
       AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-webserver:8080/execution/"
       AIRFLOW__API_AUTH__JWT_SECRET: "deF+Ve2sDL6Q8K7cW/ZyMg=="
+      PYTHONPATH: /opt/airflow
     command: scheduler
     volumes:
       - ./airflow/dags:/opt/airflow/dags
