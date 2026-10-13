@@ -1,0 +1,120 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: gastric_db
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - mlops_network
+  minio:
+    image: minio/minio
+    container_name: minio
+
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+
+    command: server /data --console-address ":9001"
+
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+    volumes:
+      - minio_data:/data
+
+    networks:
+      - mlops_network
+
+  airflow-init:
+    image: apache/airflow:3.3.0
+    depends_on:
+      - postgres
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://postgres:secret@postgres/gastric_db
+    command: >
+      bash -c "
+      airflow db migrate
+      "
+
+    networks:
+      - mlops_network
+
+  airflow-webserver:
+    image: apache/airflow:3.3.0
+    hostname: airflow-webserver
+    depends_on:
+      - postgres
+      - airflow-init
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://postgres:secret@postgres/gastric_db"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "admin:admin"
+      AIRFLOW__API__SECRET_KEY: "oVOgsX9F2GFvdw5h/mGYfA=="
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-webserver:8080/execution/"
+      AIRFLOW__API_AUTH__JWT_SECRET: "deF+Ve2sDL6Q8K7cW/ZyMg=="
+      PYTHONPATH: /opt/airflow
+    command: api-server
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+    networks:
+      - mlops_network
+
+  airflow-dag-processor:
+    image: apache/airflow:3.3.0
+    hostname: airflow-dag-processor
+    depends_on:
+      - postgres
+      - airflow-init
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://postgres:secret@postgres/gastric_db"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "admin:admin"
+      AIRFLOW__API__SECRET_KEY: "oVOgsX9F2GFvdw5h/mGYfA=="
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-webserver:8080/execution/"
+      AIRFLOW__API_AUTH__JWT_SECRET: "deF+Ve2sDL6Q8K7cW/ZyMg=="
+      PYTHONPATH: /opt/airflow
+    command: dag-processor
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+    networks:
+      - mlops_network
+
+  airflow-scheduler:
+    image: apache/airflow:3.3.0
+    hostname: airflow-scheduler
+    depends_on:
+      - postgres
+      - airflow-init
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://postgres:secret@postgres/gastric_db"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: "admin:admin"
+      AIRFLOW__API__SECRET_KEY: "oVOgsX9F2GFvdw5h/mGYfA=="
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-webserver:8080/execution/"
+      AIRFLOW__API_AUTH__JWT_SECRET: "deF+Ve2sDL6Q8K7cW/ZyMg=="
+      PYTHONPATH: /opt/airflow
+    command: scheduler
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+    networks:
+      - mlops_network
+
+volumes:
+  postgres_data:
+  minio_data:
+
+networks:
+  mlops_network:
+    driver: bridge
